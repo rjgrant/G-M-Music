@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>G‑M Music — Player</title>
+  <style>
+    :root{
+      --bg:#071018; --panel:#071722; --accent:#7dd3fc; --muted:#9aa6b2; --white:#e6eef6; --track:#263238; --radius:10px;
+    }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:transparent;color:var(--white);}
+    .player{box-sizing:border-box;width:100%;max-width:760px;margin:12px auto;padding:14px;border-radius:var(--radius);display:flex;gap:12px;align-items:flex-start;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.02));border:1px solid rgba(255,255,255,0.03);}
+    .art{width:88px;height:88px;border-radius:8px;background:linear-gradient(120deg,#17202b,#0b1a26);flex:0 0 88px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;padding:6px}
+    .meta{flex:1;min-width:0}
+    .title{font-weight:600;font-size:15px;color:var(--white);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .artist{font-size:13px;color:var(--muted);margin-bottom:8px}
+    .controls{display:flex;align-items:center;gap:12px}
+    .playbtn{--size:52px;width:var(--size);height:var(--size);background:linear-gradient(180deg,var(--panel),rgba(255,255,255,0.02));border-radius:12px;border:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--accent);box-shadow:0 4px 12px rgba(2,6,23,0.6)}
+    .playbtn:active{transform:translateY(1px)}
+    .progress{-webkit-appearance:none;appearance:none;height:8px;background:var(--track);border-radius:999px;width:100%;outline:none;cursor:pointer}
+    .progress::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 6px rgba(125,211,252,0.12);margin-top:-3px}
+    .small{font-size:12px;color:var(--muted)}
+    .right{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+    .playlist{margin-top:10px;border-radius:8px;padding:8px;background:rgba(255,255,255,0.01);max-height:160px;overflow:auto;border:1px solid rgba(255,255,255,0.02)}
+    .track-item{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:6px;cursor:pointer}
+    .track-item:hover{background:rgba(125,211,252,0.04)}
+    .track-item.active{background:linear-gradient(90deg, rgba(125,211,252,0.08), rgba(125,211,252,0.04));}
+    .controls-row{display:flex;gap:12px;align-items:center;width:100%;margin-top:6px}
+    .btn{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:6px 8px;border-radius:8px;font-size:13px;cursor:pointer}
+    @media (max-width:640px){.player{flex-direction:column;padding:10px}.art{width:64px;height:64px}.right{align-items:flex-start}}
+  </style>
+</head>
+<body>
+  <audio id="audio" preload="metadata" crossorigin="anonymous"></audio>
+
+  <div class="player" role="application" aria-label="Audio player">
+    <div class="art" aria-hidden="true">G‑M<br>Music</div>
+
+    <div class="meta">
+      <div class="title" id="trackTitle">Loading…</div>
+      <div class="artist" id="trackArtist">rjgrant</div>
+
+      <div class="controls-row">
+        <button class="playbtn" id="playBtn" aria-label="Play" title="Play (space)">
+          <svg id="iconPlay" width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 3v18l15-9L5 3z" fill="currentColor"/></svg>
+          <svg id="iconPause" width="22" height="22" viewBox="0 0 24 24" fill="none" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z" fill="currentColor"/></svg>
+        </button>
+
+        <div style="flex:1;min-width:0">
+          <input id="progress" class="progress" type="range" min="0" max="100" value="0" step="0.01" aria-label="Seek">
+          <div style="display:flex;justify-content:space-between;margin-top:6px;align-items:center">
+            <div class="small" id="currentTime">0:00</div>
+            <div class="small" id="duration">0:00</div>
+          </div>
+        </div>
+
+        <div style="width:12px"></div>
+
+        <div class="right">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="volume" type="range" min="0" max="1" step="0.01" value="1" title="Volume">
+            <a id="download" class="btn" href="#" download>Download</a>
+          </div>
+
+          <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+            <button id="prev" class="btn" title="Previous">Prev</button>
+            <button id="next" class="btn" title="Next">Next</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="playlist" id="playlist" aria-label="Playlist">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tracks = [
+      {
+        title: 'CantFindMyWayHome',
+        artist: 'rjgrant',
+        src: 'https://raw.githubusercontent.com/rjgrant/G-M-Music/18423b247d5d51f48396f7909134f916c4645e29/CantFindMyWayHome1.0.3.2.m4a',
+        type: 'audio/mp4',
+        filename: 'CantFindMyWayHome.m4a'
+      },
+      {
+        title: 'Northern White Clouds',
+        artist: 'rjgrant',
+        src: 'https://raw.githubusercontent.com/rjgrant/G-M-Music/f09df646231ac8629d8a6b6ed762dc2cf2acbd57/Northern%20White%20Clouds%201.0.4.mp3',
+        type: 'audio/mpeg',
+        filename: 'Northern_White_Clouds_1.0.4.mp3'
+      }
+    ];
+
+    const audio = document.getElementById('audio');
+    const playBtn = document.getElementById('playBtn');
+    const iconPlay = document.getElementById('iconPlay');
+    const iconPause = document.getElementById('iconPause');
+    const progress = document.getElementById('progress');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationEl = document.getElementById('duration');
+    const volume = document.getElementById('volume');
+    const download = document.getElementById('download');
+    const playlistEl = document.getElementById('playlist');
+    const titleEl = document.getElementById('trackTitle');
+    const artistEl = document.getElementById('trackArtist');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+
+    let idx = 0;
+    let raf;
+
+    function formatTime(s){ if(isNaN(s)) return '0:00'; const m = Math.floor(s/60); const sec = Math.floor(s%60).toString().padStart(2,'0'); return `${m}:${sec}`; }
+
+    function loadTrack(i, autoplay=false){
+      idx = (i + tracks.length) % tracks.length;
+      const t = tracks[idx];
+      audio.src = t.src;
+      audio.type = t.type;
+      audio.load();
+      titleEl.textContent = t.title;
+      artistEl.textContent = t.artist;
+      download.href = t.src;
+      download.download = t.filename;
+      highlightPlaylist();
+      if(autoplay) audio.play().catch(()=>{});
+    }
+
+    function updatePlayState(){
+      if(audio.paused){ iconPlay.style.display=''; iconPause.style.display='none'; playBtn.setAttribute('aria-label','Play'); }
+      else { iconPlay.style.display='none'; iconPause.style.display=''; playBtn.setAttribute('aria-label','Pause'); }
+    }
+
+    playBtn.addEventListener('click', ()=> { if(audio.paused) audio.play(); else audio.pause(); });
+
+    audio.addEventListener('loadedmetadata', ()=>{
+      durationEl.textContent = formatTime(audio.duration);
+      progress.max = audio.duration || 0;
+    });
+
+    // RAF loop for progress
+    function whilePlaying(){
+      progress.value = audio.currentTime;
+      currentTimeEl.textContent = formatTime(audio.currentTime);
+      raf = requestAnimationFrame(whilePlaying);
+    }
+    audio.addEventListener('play', ()=>{ cancelAnimationFrame(raf); whilePlaying(); updatePlayState(); });
+    audio.addEventListener('pause', ()=>{ cancelAnimationFrame(raf); updatePlayState(); });
+    audio.addEventListener('ended', ()=>{ // auto next
+      loadTrack(idx+1, true);
+    });
+
+    // Seek handling
+    let isSeeking = false;
+    progress.addEventListener('input', e=> { currentTimeEl.textContent = formatTime(e.target.value); isSeeking=true; });
+    progress.addEventListener('change', e=> { audio.currentTime = parseFloat(e.target.value); isSeeking=false; });
+    progress.addEventListener('pointerdown', ()=> cancelAnimationFrame(raf));
+    progress.addEventListener('pointerup', ()=> { if(!audio.paused) whilePlaying(); });
+
+    volume.addEventListener('input', e=> { audio.volume = parseFloat(e.target.value); });
+
+    prevBtn.addEventListener('click', ()=> loadTrack(idx-1, true));
+    nextBtn.addEventListener('click', ()=> loadTrack(idx+1, true));
+
+    // Build playlist UI
+    function highlightPlaylist(){
+      Array.from(playlistEl.children).forEach((el, i)=>{
+        el.classList.toggle('active', i===idx);
+      });
+    }
+
+    function buildPlaylist(){
+      playlistEl.innerHTML = '';
+      tracks.forEach((t, i)=>{
+        const item = document.createElement('div');
+        item.className = 'track-item';
+        item.tabIndex = 0;
+        item.innerHTML = `<div style="min-width:0;overflow:hidden"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</div><div class="small" style="margin-top:3px">${t.artist}</div></div><div class="small">${t.filename.split('.').pop()}</div>`;
+        item.addEventListener('click', ()=> loadTrack(i, true));
+        item.addEventListener('keydown', (e)=> { if(e.code==='Enter' || e.code==='Space'){ e.preventDefault(); loadTrack(i, true); } });
+        playlistEl.appendChild(item);
+      });
+      highlightPlaylist();
+    }
+
+    // Keyboard: space toggles play/pause when not focusing inputs
+    document.addEventListener('keydown', e=>{
+      const active = document.activeElement;
+      if(e.code === 'Space' && !['INPUT','TEXTAREA','SELECT','BUTTON'].includes(active.tagName)){
+        e.preventDefault();
+        if(audio.paused) audio.play(); else audio.pause();
+      }
+    });
+
+    // Initialize
+    buildPlaylist();
+    loadTrack(0, false);
+
+    // Fallback durations
+    setTimeout(()=> { if(isNaN(audio.duration)) durationEl.textContent = '–:–'; }, 1500);
+  </script>
+</body>
+</html>
